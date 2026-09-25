@@ -1,0 +1,8 @@
+.venv/
+data/
+ch-data/
+runs/
+__pycache__/
+*.pyc
+*.pid
+.DS_Store

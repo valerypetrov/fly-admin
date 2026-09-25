@@ -1,0 +1,2 @@
+numpy>=2
+pyarrow>=17   # only for `brain.py --prep`

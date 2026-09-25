@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fly Admin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='20' cy='28' rx='15' ry='7' fill='%2399b3d9' opacity='.7' transform='rotate(-30 20 28)'/%3E%3Cellipse cx='44' cy='28' rx='15' ry='7' fill='%2399b3d9' opacity='.7' transform='rotate(30 44 28)'/%3E%3Cellipse cx='32' cy='38' rx='8' ry='13' fill='%23413a2f'/%3E%3Ccircle cx='32' cy='20' r='7' fill='%23413a2f'/%3E%3Ccircle cx='27' cy='18' r='4.5' fill='%23d0443a'/%3E%3Ccircle cx='37' cy='18' r='4.5' fill='%23d0443a'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f5f4ef; --surface: #fcfcfb; --surface-2: #f2f1ec;
+  --ink: #1b1a17; --ink-2: #52514e; --muted: #86847d;
+  --grid: #e6e4dc; --axis: #c3c2b7; --border: rgba(11, 11, 11, .09);
+  --tissue: #eeeadf; --tissue-2: #e6e0d2; --mb: #d3c9b1; --path: #c7bfad;
+  --eye: #c9553f; --eye-dot: #a8412f;
+  --c-mechano: #2a78d6; --c-looming: #eb6834; --c-bitter: #1baf7a; --c-sugar: #e87ba4;
+  --c-motor: #4a3aa7; --c-central: #7a7466; --gold: #f0a500;
+  --good-ink: #006300; --crit: #d03b3b;
+  --seq-lo: #eef4fc; --seq-hi: #1c5cab; --seq-hi-ink: #ffffff; --div-neg: #c73a3a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 6px 20px rgba(0, 0, 0, .04);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0e0e0d; --surface: #1a1a19; --surface-2: #222220;
+    --ink: #f4f3ee; --ink-2: #c3c2b7; --muted: #8f8d86;
+    --grid: #2c2c2a; --axis: #3d3d3a; --border: rgba(255, 255, 255, .08);
+    --tissue: #262521; --tissue-2: #2d2b26; --mb: #4d4637; --path: #47433a;
+    --eye: #b04a38; --eye-dot: #d3634e;
+    --c-mechano: #3987e5; --c-looming: #d95926; --c-bitter: #199e70; --c-sugar: #d55181;
+    --c-motor: #9085e9; --c-central: #b8b2a4; --gold: #ffc53d;
+    --good-ink: #0ca30c;
+    --seq-lo: #1d232c; --seq-hi: #6da7ec; --seq-hi-ink: #0b0b0b; --div-neg: #e66767;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header */
+header.top {
+  display: flex; align-items: center; gap: 22px; padding: 10px 20px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.brand p { margin: 0; font-size: 12px; color: var(--muted); }
+.logo { width: 38px; height: 38px; overflow: visible; }
+.logo .wing { fill: #9db6dc; opacity: .75; transform-box: fill-box; transform-origin: 90% 60%; }
+.logo .wing.r { transform-origin: 10% 60%; }
+.logo .body { fill: #413a2f; }
+.logo .eye { fill: #d0443a; }
+.logo .legs { stroke: #413a2f; stroke-width: 2; stroke-linecap: round; fill: none; }
+@media (prefers-color-scheme: dark) { .logo .body { fill: #8a7f6c; } .logo .legs { stroke: #8a7f6c; } }
+.logo.buzz .wing.l { animation: flapL .07s ease-in-out infinite alternate; }
+.logo.buzz .wing.r { animation: flapR .07s ease-in-out infinite alternate; }
+@keyframes flapL { to { transform: rotate(-22deg); } }
+@keyframes flapR { to { transform: rotate(22deg); } }
+.logo.happy { filter: drop-shadow(0 0 7px var(--gold)); }
+.statusbox { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.statusbox .pill {
+  display: flex; align-items: center; gap: 9px; max-width: 100%;
+  padding: 6px 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border);
+  font-size: 14.5px; font-weight: 550;
+}
+#status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.beat { width: 9px; height: 9px; border-radius: 50%; background: var(--c-sugar); flex: none; transition: background .3s; }
+.beat.act { background: var(--c-motor); animation: beat .6s ease-in-out infinite alternate; }
+.beat.warn { background: var(--c-looming); }
+.beat.gold { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+@keyframes beat { to { transform: scale(1.5); } }
+.meta { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+.meta b { color: var(--ink); font-weight: 650; }
+.conn { display: inline-flex; align-items: center; gap: 6px; }
+.conn::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.conn.live::before { background: #0ca30c; }
+.badge { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 650; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink-2); border: 1px dashed var(--axis); }
+
+/* layout */
+main {
+  display: grid; gap: 14px; padding: 14px 20px 28px; max-width: 1800px; margin: 0 auto;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr) minmax(310px, .9fr);
+  grid-template-areas: "brain health feed" "raster learn feed";
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px 14px 14px; min-width: 0; box-shadow: var(--shadow);
+}
+.card-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.card-h h2 { margin: 0; font-size: 13.5px; font-weight: 700; }
+.card-h .hint { color: var(--muted); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-h .right { margin-left: auto; flex: none; }
+.brain { grid-area: brain; }
+.raster { grid-area: raster; display: flex; flex-direction: column; }
+.health { grid-area: health; }
+.learn { grid-area: learn; }
+.feed { grid-area: feed; display: flex; flex-direction: column; }
+h3 { margin: 12px 0 6px; font-size: 12.5px; font-weight: 650; color: var(--ink-2); }
+
+/* brain */
+#brain { width: 100%; height: auto; display: block; }
+.tissue .eye { fill: var(--eye); opacity: .16; }
+.tissue .omm { fill: url(#omm); opacity: .45; }
+#omm circle { fill: var(--eye-dot); }
+.tissue .lobe { fill: var(--tissue-2); }
+.tissue .cb { fill: var(--tissue); }
+.antennae path { fill: none; stroke: var(--mb); stroke-width: 5; stroke-linecap: round; }
+.antennae circle { fill: var(--mb); }
+.mb circle { fill: var(--mb); opacity: .55; transition: fill .4s; }
+.mb path { fill: none; stroke: var(--mb); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; opacity: .8; transition: stroke .4s; }
+.mb.gold circle { fill: var(--gold); }
+.mb.gold path { stroke: var(--gold); }
+.captions text { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; fill: var(--muted); text-anchor: middle; }
+.path { fill: none; stroke: var(--path); stroke-width: 1.6; }
+.path.faint { opacity: .55; stroke-width: 1.2; }
+.path.inh { stroke-dasharray: 4 4; }
+.flow { fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 2 12; opacity: 0;
+  animation: flow 1s linear infinite; transition: opacity .4s; }
+.flow.inh { stroke-dasharray: 5 9; }
+@keyframes flow { to { stroke-dashoffset: -14; } }
+.glow { transition: opacity .45s; }
+.core { stroke: var(--surface); stroke-width: 2; transition: fill-opacity .45s; }
+.node { cursor: default; }
+.ring { fill: none; stroke-width: 2.5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+#labels text { paint-order: stroke; stroke: var(--tissue); stroke-width: 4px; stroke-linejoin: round; }
+#labels text.out { stroke: var(--surface); }
+#labels .nm { font-size: 15px; font-weight: 650; fill: var(--ink); }
+#labels .nm.chosen { fill: var(--c-motor); font-size: 16.5px; }
+#labels .sub { font-size: 12px; fill: var(--ink-2); }
+.da-float { font-size: 13px; font-weight: 700; fill: var(--gold); paint-order: stroke; stroke: var(--tissue); stroke-width: 4px; text-anchor: middle; }
+.meter { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+.meter .track { width: 90px; height: 7px; border-radius: 4px; background: color-mix(in oklab, var(--gold) 18%, var(--surface-2)); overflow: hidden; }
+.meter .fill { height: 100%; width: 0; background: var(--gold); border-radius: 4px; transition: width .4s; }
+
+/* raster */
+.raster-body { flex: 1; min-height: 170px; display: flex; gap: 8px; }
+#rasterLabels { position: relative; width: 84px; flex: none; }
+.rl { position: absolute; right: 0; transform: translateY(-50%); display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--ink-2); white-space: nowrap; }
+.rl i { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.raster-canvas { flex: 1; min-width: 0; position: relative; border-left: 1px solid var(--axis); }
+#raster { position: absolute; inset: 0; width: 100%; height: 100%; }
+.raster-foot { display: flex; justify-content: space-between; margin: 4px 0 0 92px; font-size: 10.5px; color: var(--muted); }
+
+/* health */
+#issues { display: flex; flex-direction: column; gap: 6px; min-height: 42px; }
+.issue { display: grid; grid-template-columns: 10px minmax(0, 1fr) 70px 58px; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 10px; background: var(--surface-2); }
+.issue .k { width: 10px; height: 10px; border-radius: 50%; }
+.issue .nm { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue .nm small { font-weight: 400; color: var(--muted); margin-left: 6px; font-size: 11px; }
+.sev { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.sev i { display: block; height: 100%; border-radius: 3px; }
+.issue .age { text-align: right; font-size: 12px; color: var(--ink-2); }
+.calm { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
+  background: color-mix(in oklab, var(--c-sugar) 10%, var(--surface)); color: var(--ink-2); font-size: 13px; }
+.calm b { color: var(--ink); }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.tile { padding: 8px 10px 6px; border-radius: 10px; border: 1px solid var(--border); position: relative; transition: box-shadow .3s; }
+.tile.hot { box-shadow: inset 0 0 0 1.5px var(--tc); }
+.tile .tl { font-size: 11.5px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.tile .tl i { width: 8px; height: 8px; border-radius: 50%; background: var(--tc); flex: none; }
+.tile .tv { font-size: 19px; font-weight: 650; letter-spacing: -.01em; margin-top: 1px; }
+.spark { width: 100%; height: 30px; display: block; margin-top: 2px; }
+.spark .line { fill: none; stroke: var(--tc); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.spark .area { fill: var(--tc); opacity: .1; }
+details.allm { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+details.allm summary { cursor: pointer; color: var(--muted); }
+#allMetrics { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 12px; margin-top: 6px; }
+#allMetrics span:nth-child(odd) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#allMetrics span:nth-child(even) { text-align: right; color: var(--ink); }
+
+/* learning */
+.headline { font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; min-height: 18px; }
+.headline b { color: var(--ink); }
+.headline .better { color: var(--good-ink); font-weight: 650; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--ink-2); margin-bottom: 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 9px; height: 9px; border-radius: 50%; }
+.legend em { font-style: normal; color: var(--muted); }
+#ttf { width: 100%; height: 140px; display: block; overflow: visible; }
+#ttf .gl { stroke: var(--grid); stroke-width: 1; }
+#ttf .base { stroke: var(--axis); stroke-width: 1; }
+#ttf text { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+#ttf text.end { fill: var(--ink-2); font-size: 11px; }
+#ttf text.empty { font-size: 12.5px; }
+#ttf .ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+#ttf .dot { stroke: var(--surface); stroke-width: 2; }
+#ttf .hit { fill: transparent; }
+.heat { display: grid; gap: 3px; font-size: 11.5px; }
+.heat .ch { text-align: center; color: var(--ink-2); font-weight: 600; padding-bottom: 2px; }
+.heat .rh { display: flex; align-items: center; gap: 7px; min-width: 0; line-height: 1.15; }
+.heat .rh i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.heat .rh span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heat .rh small { display: block; color: var(--muted); font-size: 10.5px; }
+.heat .cell { height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums; font-size: 12px; transition: background .5s; }
+.heat .cell.target { box-shadow: inset 0 0 0 2px var(--ink); }
+.h3hint { font-weight: 400; color: var(--muted); font-size: 11.5px; margin-left: 6px; }
+
+/* feed */
+#feed { list-style: none; margin: 0; padding: 0 2px 0 0; flex: 1 1 0; height: 0; min-height: 0; overflow: auto; }
+#feed li { padding: 9px 10px; border-radius: 10px; margin-bottom: 6px; background: var(--surface-2); border-left: 3px solid transparent; }
+#feed li.new { animation: enter .45s ease-out; }
+@keyframes enter { from { opacity: 0; transform: translateY(-6px); } }
+#feed li.rewarded { border-left-color: var(--gold); }
+.ev-h { display: flex; align-items: baseline; gap: 8px; }
+.ev-h .t { color: var(--muted); font-size: 11.5px; }
+.ev-h .act { font-weight: 700; font-size: 14px; color: var(--c-motor); }
+.ev-h .ok { margin-left: auto; font-size: 11.5px; font-weight: 650; }
+.ev-h .ok.y { color: var(--good-ink); }
+.ev-h .ok.n { color: var(--crit); }
+.why { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.why .sd { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin: 0 3px 1px 0; }
+.drive { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 14px; margin: 6px 0 4px; max-width: 560px; }
+.drive div { display: grid; grid-template-columns: 44px minmax(0, 1fr) 30px; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-2); }
+.drive .bar { height: 5px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.drive .bar i { display: block; height: 100%; border-radius: 3px; background: var(--axis); }
+.drive .win { color: var(--ink); font-weight: 650; }
+.drive .win .bar i { background: var(--c-motor); }
+.drive .v { text-align: right; }
+.res { font-size: 12px; color: var(--ink-2); }
+.res code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); margin-top: 1px; }
+#feed li.reward { background: color-mix(in oklab, var(--gold) 13%, var(--surface)); border-left-color: var(--gold); font-size: 13px; }
+#feed li.reward b { font-weight: 700; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; }
+.empty-feed { color: var(--muted); font-size: 12.5px; padding: 8px 2px; }
+
+#tip {
+  position: fixed; z-index: 10; pointer-events: none; max-width: 280px;
+  padding: 6px 9px; border-radius: 8px; font-size: 12px; line-height: 1.35;
+  background: var(--ink); color: var(--surface); box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+}
+
+@media (max-width: 1320px) {
+  main { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-areas: "brain health" "raster learn" "feed feed"; }
+  #feed { height: 460px; flex: none; }
+}
+@media (max-width: 860px) {
+  header.top { flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; }
+  .statusbox { order: 3; flex-basis: 100%; justify-content: flex-start; }
+  .meta { flex-wrap: wrap; }
+  main { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 24px;
+    grid-template-areas: "brain" "health" "feed" "raster" "learn"; }
+  .tiles { grid-template-columns: minmax(0, 1fr); }
+  .drive { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow, .beat.act, .logo.buzz .wing { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" id="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <ellipse class="wing l" cx="20" cy="29" rx="15" ry="7" transform="rotate(-28 20 29)"/>
+      <ellipse class="wing r" cx="44" cy="29" rx="15" ry="7" transform="rotate(28 44 29)"/>
+      <path class="legs" d="M27 35l-9 4M26 40l-8 8M28 44l-5 10M37 35l9 4M38 40l8 8M36 44l5 10"/>
+      <ellipse class="body" cx="32" cy="39" rx="8" ry="13"/>
+      <circle class="body" cx="32" cy="21" r="7"/>
+      <circle class="eye" cx="27.2" cy="19" r="4.3"/><circle class="eye" cx="36.8" cy="19" r="4.3"/>
+    </svg>
+    <div><h1>Fly Admin</h1><p>a fruit fly brain babysits ClickHouse</p></div>
+  </div>
+  <div class="statusbox"><div class="pill" aria-live="polite"><span class="beat" id="beat"></span><span id="status">waiting for the fly…</span></div></div>
+  <div class="meta">
+    <span><b id="nNeurons" class="num">–</b> neurons</span>
+    <span><b id="nSyn" class="num">–</b> synapses</span>
+    <span>fly time <b id="clock" class="num">0:00</b></span>
+    <span id="conn" class="conn">connecting</span>
+    <span id="demoBadge" class="badge" hidden>demo</span>
+  </div>
+</header>
+
+<main>
+  <section class="card brain">
+    <div class="card-h">
+      <h2>Brain</h2><span class="hint">glow = firing rate · moving dashes = signal flow</span>
+      <span class="right meter" data-tip="Dopamine level. It jumps when the fly fixes an issue.">dopamine
+        <span class="track"><span class="fill" id="daFill"></span></span><b id="daVal" class="num">0.00</b></span>
+    </div>
+    <svg id="brain" viewBox="0 0 760 500" role="img" aria-label="Stylised fly brain. Neuron groups glow with their firing rate.">
+      <defs>
+        <pattern id="omm" width="7" height="6.06" patternUnits="userSpaceOnUse"><circle cx="1.75" cy="1.5" r="1.25"/><circle cx="5.25" cy="4.53" r="1.25"/></pattern>
+        <filter id="blur" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+        <radialGradient id="goldGlow"><stop offset="0" style="stop-color: var(--gold); stop-opacity: .9"/><stop offset="1" style="stop-color: var(--gold); stop-opacity: 0"/></radialGradient>
+      </defs>
+      <g class="tissue">
+        <ellipse class="eye" cx="54" cy="178" rx="42" ry="112"/><ellipse class="omm" cx="54" cy="178" rx="42" ry="112"/>
+        <ellipse class="eye" cx="706" cy="178" rx="42" ry="112"/><ellipse class="omm" cx="706" cy="178" rx="42" ry="112"/>
+        <ellipse class="lobe" cx="166" cy="178" rx="66" ry="102"/>
+        <ellipse class="lobe" cx="594" cy="178" rx="66" ry="102"/>
+        <ellipse class="cb" cx="380" cy="168" rx="172" ry="128"/>
+        <ellipse class="cb" cx="380" cy="290" rx="92" ry="50"/>
+      </g>
+      <g class="antennae">
+        <path d="M362 46 C352 30 338 20 320 14"/><circle cx="317" cy="13" r="6"/>
+        <path d="M398 46 C408 30 422 20 440 14"/><circle cx="443" cy="13" r="6"/>
+      </g>
+      <g class="mb" id="mb">
+        <circle cx="304" cy="104" r="22"/><circle cx="456" cy="104" r="22"/>
+        <path d="M304 104 L346 182 L342 134 M346 182 L376 186"/>
+        <path d="M456 104 L414 182 L418 134 M414 182 L384 186"/>
+      </g>
+      <g id="daFlash" opacity="0">
+        <ellipse cx="336" cy="160" rx="92" ry="100" fill="url(#goldGlow)"/>
+        <ellipse cx="424" cy="160" rx="92" ry="100" fill="url(#goldGlow)"/>
+      </g>
+      <g class="captions">
+        <text x="54" y="308">eye</text><text x="706" y="308">eye</text>
+        <text x="166" y="298">optic lobe</text><text x="594" y="298">optic lobe</text>
+        <text x="380" y="10">antennae</text>
+        <text x="380" y="66">mushroom bodies</text>
+        <text x="46" y="456">actions</text>
+      </g>
+      <g id="glows"></g><g id="paths"></g><g id="nodes"></g><g id="labels"></g>
+    </svg>
+  </section>
+
+  <section class="card raster">
+    <div class="card-h"><h2>Spikes</h2><span class="hint">sampled neurons, one row each</span></div>
+    <div class="raster-body">
+      <div id="rasterLabels"></div>
+      <div class="raster-canvas"><canvas id="raster"></canvas></div>
+    </div>
+    <div class="raster-foot"><span>30 s ago</span><span>gold line = dopamine · violet tick = action</span><span>now</span></div>
+  </section>
+
+  <section class="card health">
+    <div class="card-h"><h2>Cluster</h2><span class="hint">sandbox ClickHouse on 127.0.0.1</span><span class="right hint" id="issueCount"></span></div>
+    <div id="issues"></div>
+    <div class="tiles" id="tiles"></div>
+    <details class="allm"><summary>all metrics</summary><div id="allMetrics" class="mono"></div></details>
+  </section>
+
+  <section class="card learn">
+    <div class="card-h"><h2>Learning</h2><span class="hint">time to fix, per issue kind</span></div>
+    <div class="headline" id="headline"></div>
+    <div class="legend" id="ttfLegend"></div>
+    <svg id="ttf" role="img" aria-label="Time to fix each issue over time"></svg>
+    <h3>What the fly learned: sense → action <span class="h3hint">darker = stronger · outline = the right fix</span></h3>
+    <div class="heat" id="heat"></div>
+  </section>
+
+  <section class="card feed">
+    <div class="card-h"><h2>Decisions</h2><span class="hint">what it sensed, what it chose and why</span></div>
+    <ol id="feed"></ol>
+  </section>
+</main>
+<div id="tip" hidden></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const SENSES = ['sugar', 'bitter', 'antennal_mechano', 'looming'];
+const ACTIONS = ['groom', 'escape', 'feed', 'walk'];
+const ACTION_GROUP = {groom: 'grooming', escape: 'escape', feed: 'feeding', walk: 'walking'};
+const SENSE_INFO = {
+  sugar: {name: 'sugar', means: 'healthy', color: '--c-sugar', fix: 'feed'},
+  bitter: {name: 'bitter', means: 'errors', color: '--c-bitter', fix: 'feed'},
+  antennal_mechano: {name: 'antenna', means: 'too many parts', color: '--c-mechano', fix: 'groom'},
+  looming: {name: 'looming', means: 'slow query', color: '--c-looming', fix: 'escape'},
+};
+const KINDS = {
+  too_many_parts: {name: 'too many parts', color: '--c-mechano'},
+  slow_query: {name: 'slow query', color: '--c-looming'},
+  errors: {name: 'error burst', color: '--c-bitter'},
+};
+const kindInfo = k => KINDS[k] || {name: String(k).replace(/_/g, ' '), color: '--c-central'};
+const VERB = {
+  groom: 'grooming the dirty table…', escape: 'escaping! killing the slow query…',
+  feed: 'feeding calmly, doing nothing harmful…', walk: 'walking around, dropping the mark cache…',
+};
+
+// Brain layout in the SVG's 760x500 space. lab = [x, y, text-anchor] of the label.
+const GROUPS = {
+  sugar:            {pos: [[340, 290]], color: '--c-sugar', name: 'sugar', note: 'healthy', lab: [324, 287, 'end'], floor: 40},
+  bitter:           {pos: [[420, 290]], color: '--c-bitter', name: 'bitter', note: 'errors', lab: [436, 287, 'start'], floor: 40},
+  antennal_mechano: {pos: [[250, 104], [510, 104]], color: '--c-mechano', name: 'antenna', note: 'too many parts', lab: [234, 101, 'end'], floor: 40},
+  looming:          {pos: [[162, 168], [598, 168]], color: '--c-looming', name: 'looming', note: 'slow query', lab: [162, 197, 'middle'], floor: 40},
+  kenyon:           {pos: [[304, 104], [456, 104]], color: '--c-central', name: 'Kenyon cells', lab: [380, 98, 'middle'], r: 9, floor: 8},
+  mbon:             {pos: [[342, 134], [418, 134]], color: '--c-central', name: 'MBON', lab: [380, 133, 'middle'], r: 9, floor: 8},
+  dopamine_pam:     {pos: [[354, 214], [406, 214]], color: '--gold', name: 'dopamine', note: 'PAM', lab: [340, 236, 'end'], r: 9, floor: 20},
+  grooming:         {pos: [[160, 452]], color: '--c-motor', name: 'groom', note: 'OPTIMIZE', lab: [160, 480, 'middle'], r: 14, floor: 20, motor: 1},
+  feeding:          {pos: [[300, 452]], color: '--c-motor', name: 'feed', note: 'do nothing', lab: [300, 480, 'middle'], r: 14, floor: 20, motor: 1},
+  walking:          {pos: [[460, 452]], color: '--c-motor', name: 'walk', note: 'drop cache', lab: [460, 480, 'middle'], r: 14, floor: 20, motor: 1},
+  escape:           {pos: [[600, 452]], color: '--c-motor', name: 'escape', note: 'KILL QUERY', lab: [600, 480, 'middle'], r: 14, floor: 20, motor: 1},
+};
+// Pathways. sense: lit by the cluster's stimulus; from: lit by that group's firing.
+const PATHS = [
+  {d: 'M98 168 L150 168', sense: 'looming'}, {d: 'M662 168 L610 168', sense: 'looming'},
+  {d: 'M356 48 Q290 52 258 94', sense: 'antennal_mechano'}, {d: 'M404 48 Q470 52 502 94', sense: 'antennal_mechano'},
+  {d: 'M173 162 Q240 120 283 108', from: 'looming', faint: 1}, {d: 'M587 162 Q520 120 477 108', from: 'looming', faint: 1},
+  {d: 'M316 124 L346 182 L342 144', from: 'kenyon'}, {d: 'M444 124 L414 182 L418 144', from: 'kenyon'},
+  {d: 'M352 205 L344 144', from: 'dopamine_pam'}, {d: 'M408 205 L416 144', from: 'dopamine_pam'},
+  {d: 'M342 144 C346 190 376 200 380 235', from: 'mbon'}, {d: 'M418 144 C414 190 384 200 380 235', from: 'mbon'},
+  {d: 'M380 235 C380 380 460 360 460 437', from: 'mbon'},
+  {d: 'M250 116 C250 280 160 280 160 437', from: 'antennal_mechano'},
+  {d: 'M598 180 C598 310 600 310 600 437', from: 'looming'},
+  {d: 'M340 302 C340 370 300 370 300 437', from: 'sugar'},
+  {d: 'M420 302 C420 370 300 370 300 437', from: 'bitter', inh: 1},
+];
+
+const S = {};
+const nodeEls = {}, flowEls = [];
+const num = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const fmtHz = r => (r >= 10 ? Math.round(r) : r.toFixed(1)) + ' Hz';
+const fmtClock = t => { t = Math.max(0, Math.floor(num(t))); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+const fmtAge = s => (s < 60 ? s.toFixed(1) + ' s' : Math.floor(s / 60) + 'm ' + String(Math.floor(s % 60)).padStart(2, '0') + 's');
+const fmtNum = v => (Math.abs(v) >= 100 ? Math.round(v).toLocaleString() : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2));
+const fmtBytes = b => (b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : (b / 1e6).toFixed(0) + ' MB');
+const compact = n => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(0) + 'K' : n.toLocaleString());
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const ordered = (keys, first) => [...first.filter(k => keys.includes(k)), ...keys.filter(k => !first.includes(k))];
+const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+/* ---------- brain ---------- */
+function buildBrain() {
+  const G = $('#glows'), P = $('#paths'), N = $('#nodes'), L = $('#labels');
+  for (const p of PATHS) {
+    svgEl('path', {d: p.d, class: 'path' + (p.inh ? ' inh' : '') + (p.faint ? ' faint' : '')}, P);
+    const color = (GROUPS[p.sense || p.from] || {}).color || '--c-central';
+    const f = svgEl('path', {d: p.d, class: 'flow' + (p.inh ? ' inh' : ''), style: `stroke: var(${color})`}, P);
+    flowEls.push({el: f, sense: p.sense, from: p.from});
+  }
+  for (const [g, d] of Object.entries(GROUPS)) {
+    const r = d.r || 11, e = nodeEls[g] = {glows: [], cores: [], rings: [], tips: []};
+    for (const [x, y] of d.pos) {
+      e.glows.push(svgEl('circle', {cx: x, cy: y, r: r * 2.3, class: 'glow', filter: 'url(#blur)', style: `fill: var(${d.color}); opacity: 0`}, G));
+      const n = svgEl('g', {class: 'node'}, N);
+      if (d.motor) e.rings.push(svgEl('circle', {cx: x, cy: y, r, class: 'ring', style: `stroke: var(${d.color})`}, n));
+      e.cores.push(svgEl('circle', {cx: x, cy: y, r, class: 'core', style: `fill: var(${d.color}); fill-opacity: .3`}, n));
+      e.tips.push(n);
+    }
+    const [x, y, anchor] = d.lab, out = d.motor ? ' out' : '';
+    e.nm = svgEl('text', {x, y, 'text-anchor': anchor, class: 'nm' + out}, L);
+    e.nm.textContent = d.name;
+    e.sub = svgEl('text', {x, y: y + 15, 'text-anchor': anchor, class: 'sub' + out}, L);
+    e.sub.textContent = d.note || '';
+  }
+}
+
+function level(g, r, floor) {
+  // Glow relative to a slowly decaying peak, so each group shows its own ups and downs.
+  const p = S.peak[g] = Math.max((S.peak[g] || 0) * 0.995, r, floor);
+  return Math.min(1, r / p);
+}
+
+function updateBrain(tick) {
+  const brain = tick.brain || {}, senses = tick.senses || {}, sizes = (S.hello || {}).groups || {};
+  for (const [g, d] of Object.entries(GROUPS)) {
+    const r = num(brain[g]), I = S.level[g] = level(g, r, d.floor), e = nodeEls[g];
+    e.glows.forEach(c => (c.style.opacity = (0.06 + 0.85 * I).toFixed(3)));
+    e.cores.forEach(c => (c.style.fillOpacity = (0.25 + 0.75 * I).toFixed(3)));
+    e.sub.textContent = (d.note ? d.note + ' · ' : '') + (g in brain ? fmtHz(r) : 'n/a');
+    const size = sizes[g] ? ` · ${num(sizes[g]).toLocaleString()} neurons` : '';
+    e.tips.forEach(n => (n.dataset.tip = `${g}: ${g in brain ? fmtHz(r) : 'no data'}${size}` +
+      (senses[g] != null ? ` · stimulus ${fmtHz(num(senses[g]))}` : '')));
+  }
+  S.sensePeak = Math.max(S.sensePeak * 0.995, 50, ...SENSES.map(s => num(senses[s])));
+  for (const f of flowEls) {
+    const I = f.sense ? num(senses[f.sense]) / S.sensePeak : S.level[f.from] || 0;
+    f.el.style.opacity = I < 0.12 ? 0 : (0.2 + 0.8 * Math.min(1, I)).toFixed(2);
+  }
+  const da = num(tick.dopamine);
+  S.daMax = Math.max(S.daMax, da, 1);
+  $('#daFill').style.width = (100 * da / S.daMax).toFixed(1) + '%';
+  $('#daVal').textContent = da.toFixed(2);
+}
+
+function actionPulse(action) {
+  const e = nodeEls[ACTION_GROUP[action]];
+  if (!e) return;
+  e.nm.classList.add('chosen');
+  clearTimeout(e.timer);
+  e.timer = setTimeout(() => e.nm.classList.remove('chosen'), 1800);
+  if (!reduceMotion) e.rings.forEach(r => r.animate(
+    [{transform: 'scale(1)', opacity: 0.9}, {transform: 'scale(3.2)', opacity: 0}], {duration: 1100, easing: 'ease-out'}));
+}
+
+function dopamineFlash(amount) {
+  const mb = $('#mb'), logo = $('#logo');
+  mb.classList.add('gold'); logo.classList.add('happy');
+  clearTimeout(S.goldTimer);
+  S.goldTimer = setTimeout(() => { mb.classList.remove('gold'); logo.classList.remove('happy'); }, 1800);
+  if (reduceMotion) return;
+  $('#daFlash').animate([{opacity: 0}, {opacity: Math.min(1, 0.5 + num(amount) * 0.5), offset: 0.15}, {opacity: 0}],
+    {duration: 2000, easing: 'ease-out'});
+  const t = svgEl('text', {x: 380, y: 196, class: 'da-float'}, $('#labels'));
+  t.textContent = `+${num(amount).toFixed(2)} dopamine`;
+  t.animate([{transform: 'translateY(0)', opacity: 0}, {opacity: 1, offset: 0.15}, {transform: 'translateY(-46px)', opacity: 0}],
+    {duration: 2000, easing: 'ease-out'}).onfinish = () => t.remove();
+}
+
+/* ---------- spike raster ---------- */
+const R = {w: 0, h: 0, dpr: 1, prevT: null, prevMax: 0, maxSlot: 0, colors: {}};
+const WINDOW_S = 30;
+
+function rasterSetup() {
+  R.cv = $('#raster'); R.ctx = R.cv.getContext('2d');
+  R.buf = document.createElement('canvas');
+  new ResizeObserver(rasterResize).observe(R.cv.parentElement);
+}
+function rasterResize() {
+  const box = R.cv.parentElement, w = box.clientWidth, h = box.clientHeight;
+  if (!w || !h || (w === R.w && h === R.h)) return;
+  Object.assign(R, {w, h, dpr: devicePixelRatio || 1});
+  R.cv.width = R.buf.width = Math.round(w * R.dpr);
+  R.cv.height = R.buf.height = Math.round(h * R.dpr);
+  R.ctx.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
+  rasterLabels();
+}
+function rasterRows() { return S.rasterTotal || R.maxSlot + 1; }
+function rasterColors() {
+  R.colors = {};
+  for (const g of Object.keys(GROUPS)) R.colors[g] = cssVar(GROUPS[g].color);
+  R.colors._ink = cssVar('--ink-2'); R.colors._gold = cssVar('--gold'); R.colors._motor = cssVar('--c-motor');
+}
+function slotColor(s) {
+  for (const b of S.rasterGroups || []) if (s >= b.lo && s < b.hi) return R.colors[b.g] || R.colors._ink;
+  return R.colors._ink;
+}
+function rasterLabels() {
+  const box = $('#rasterLabels');
+  box.textContent = '';
+  const rows = rasterRows();
+  for (const b of S.rasterGroups || []) {
+    if ((b.hi - b.lo) / rows * R.h < 9) continue;
+    const d = document.createElement('div');
+    d.className = 'rl';
+    d.style.top = ((b.lo + b.hi) / 2 / rows * R.h) + 'px';
+    d.innerHTML = `${esc(GROUPS[b.g] ? GROUPS[b.g].name : b.g)}<i style="background: var(${(GROUPS[b.g] || {}).color || '--ink-2'})"></i>`;
+    box.appendChild(d);
+  }
+}
+function rasterClear() {
+  if (R.ctx) R.ctx.clearRect(0, 0, R.w, R.h);
+  R.prevT = null; R.prevMax = 0;
+}
+function rasterTick(tick) {
+  if (!R.w) return;
+  const dt = R.prevT == null ? 0.5 : Math.min(2, Math.max(0.05, num(tick.t) - R.prevT));
+  R.prevT = num(tick.t);
+  // Scroll the old picture left by the time that passed, then draw the new spikes on the right.
+  const shift = Math.max(1, Math.round(R.w * R.dpr * dt / WINDOW_S)), strip = shift / R.dpr;
+  const b = R.buf.getContext('2d'), c = R.ctx;
+  b.clearRect(0, 0, R.buf.width, R.buf.height); b.drawImage(R.cv, 0, 0);
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, R.cv.width, R.cv.height); c.drawImage(R.buf, -shift, 0); c.restore();
+  const sp = Array.isArray(tick.raster) ? tick.raster : [];
+  if (!sp.length) return;
+  let tmin = Infinity, tmax = -Infinity;
+  for (const [s, t] of sp) { tmin = Math.min(tmin, t); tmax = Math.max(tmax, t); R.maxSlot = Math.max(R.maxSlot, s); }
+  const lo = R.prevMax > 0 && tmin >= R.prevMax && tmin - R.prevMax < 2000 ? R.prevMax : tmin;
+  const span = Math.max(1, tmax - lo), rows = rasterRows(), rowH = R.h / rows, x0 = R.w - strip;
+  R.prevMax = tmax;
+  const byColor = new Map();
+  for (const [s, t] of sp) {
+    const col = slotColor(s);
+    if (!byColor.has(col)) byColor.set(col, []);
+    byColor.get(col).push(x0 + (t - lo) / span * strip, s * rowH);
+  }
+  const hgt = rowH > 2 ? rowH - 0.8 : Math.max(0.8, rowH - 0.3);
+  c.globalAlpha = 0.8;
+  for (const [col, a] of byColor) {
+    c.fillStyle = col;
+    for (let i = 0; i < a.length; i += 2) c.fillRect(a[i], a[i + 1], 1.2, hgt);
+  }
+  c.globalAlpha = 1;
+}
+function rasterMark(kind) {
+  if (!R.w) return;
+  const c = R.ctx;
+  if (kind === 'reward') { c.globalAlpha = 0.6; c.fillStyle = R.colors._gold; c.fillRect(R.w - 2, 0, 2, R.h); c.globalAlpha = 1; }
+  else { c.fillStyle = R.colors._motor; c.beginPath(); c.moveTo(R.w - 7, 0); c.lineTo(R.w, 0); c.lineTo(R.w - 3.5, 7); c.fill(); }
+}
+
+/* ---------- cluster health ---------- */
+const TILES = [
+  {id: 'parts', label: 'Active parts, worst table', keys: ['max_parts', 'parts_max', 'active_parts_max'], re: /part/i, fmt: v => Math.round(v).toLocaleString(), color: '--c-mechano', kind: 'too_many_parts'},
+  {id: 'slow', label: 'Longest running query', keys: ['slow_query_s', 'max_elapsed', 'longest_query_s', 'max_query_elapsed'], re: /elapsed|slow|longest/i, fmt: v => v.toFixed(1) + ' s', color: '--c-looming', kind: 'slow_query'},
+  {id: 'err', label: 'Errors per second', keys: ['error_rate', 'errors_per_s', 'errors_per_sec', 'errors_rate'], re: /err/i, fmt: fmtNum, color: '--c-bitter', kind: 'errors'},
+  {id: 'qps', label: 'Queries per second', keys: ['qps', 'queries_per_s', 'queries_per_sec'], re: /qps|quer/i, fmt: fmtNum, color: '--ink-2'},
+  {id: 'mem', label: 'Memory in use', keys: ['memory_bytes', 'memory', 'mem_bytes', 'memory_tracking'], re: /mem/i, fmt: fmtBytes, color: '--ink-2'},
+];
+const SPARK_N = 240;
+
+function buildTiles() {
+  $('#tiles').innerHTML = TILES.map(t => `
+    <div class="tile" id="tile-${t.id}" style="--tc: var(${t.color})">
+      <div class="tl"><i></i>${t.label}</div>
+      <div class="tv num">–</div>
+      <svg class="spark" viewBox="0 0 ${SPARK_N} 30" preserveAspectRatio="none"><path class="area"/><path class="line"/></svg>
+    </div>`).join('');
+}
+function flatten(o, pre = '', out = {}) {
+  if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) flatten(v, pre ? pre + '.' + k : k, out);
+  else if (typeof o === 'number' && isFinite(o)) out[pre] = o;
+  return out;
+}
+function pick(flat, t) {
+  for (const k of t.keys) if (k in flat) return flat[k];
+  let best = null;
+  for (const [k, v] of Object.entries(flat)) if (t.re.test(k) && (best === null || v > best)) best = v;
+  return best;
+}
+function updateTiles(tick) {
+  const flat = flatten(tick.metrics || {}), open = new Set((tick.issues || []).map(i => i.kind));
+  for (const t of TILES) {
+    const v = pick(flat, t), el = $('#tile-' + t.id), h = S.hist[t.id] = S.hist[t.id] || [];
+    h.push(v == null ? null : v);
+    if (h.length > SPARK_N) h.shift();
+    el.querySelector('.tv').textContent = v == null ? 'n/a' : t.fmt(v);
+    el.classList.toggle('hot', !!t.kind && open.has(t.kind));
+    const vals = h.filter(x => x != null), max = Math.max(1e-9, ...vals) * 1.15;
+    let line = '', x0 = null;
+    h.forEach((x, i) => {
+      if (x == null) return;
+      const px = SPARK_N - (h.length - 1 - i), py = 29 - (x / max) * 27;
+      line += (line ? 'L' : 'M') + px + ' ' + py.toFixed(2);
+      if (x0 === null) x0 = px;
+    });
+    el.querySelector('.line').setAttribute('d', line);
+    el.querySelector('.area').setAttribute('d', line ? `${line}L${SPARK_N} 30L${x0} 30Z` : '');
+  }
+  if ($('details.allm').open) {
+    $('#allMetrics').innerHTML = Object.entries(flat).map(([k, v]) => `<span title="${esc(k)}">${esc(k)}</span><span>${fmtNum(v)}</span>`).join('');
+  }
+}
+function issueAge(i) {
+  const since = num(i.since);
+  if (since > 1e8) return Date.now() / 1000 - since;  // unix seconds
+  const drift = S.tick ? (performance.now() - S.tickAt) / 1000 : 0;
+  return Math.max(0, num(S.tick && S.tick.t) + drift - since);
+}
+function renderIssues() {
+  const issues = (S.tick && S.tick.issues) || [];
+  $('#issueCount').textContent = issues.length ? `${issues.length} open` : '';
+  if (!issues.length) {
+    $('#issues').innerHTML = `<div class="calm"><span class="beat"></span><span><b>All healthy.</b> The fly tastes sugar and relaxes.</span></div>`;
+    return;
+  }
+  $('#issues').innerHTML = issues.map(i => {
+    const k = kindInfo(i.kind), sev = num(i.severity), f = Math.max(0.04, Math.min(1, sev <= 1 ? sev : 1));
+    return `<div class="issue" data-tip="${esc(i.id)} · severity ${esc(fmtNum(sev))}">
+      <span class="k" style="background: var(${k.color})"></span>
+      <span class="nm">${esc(k.name)}<small class="mono">${esc(i.id)}</small></span>
+      <span class="sev"><i style="width: ${(f * 100).toFixed(0)}%; background: var(${k.color})"></i></span>
+      <span class="age num">${fmtAge(issueAge(i))}</span></div>`;
+  }).join('');
+}
+
+/* ---------- learning ---------- */
+function niceStep(x) {
+  const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function drawTTF() {
+  const svg = $('#ttf'), W = Math.max(260, svg.clientWidth || 400), H = 140;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const data = S.rewards.filter(r => isFinite(r.ttf) && isFinite(r.t));
+  const kinds = ordered([...new Set(data.map(d => d.kind))], Object.keys(KINDS));
+  $('#ttfLegend').innerHTML = kinds.map(k => `<span><i style="background: var(${kindInfo(k).color})"></i>${esc(kindInfo(k).name)}</span>`).join('') +
+    (kinds.includes('errors') ? '<span><em>error bursts heal on their own</em></span>' : '');
+  // Per issue kind: median of the first half of its fixes vs the second half.
+  const halves = kinds.filter(k => k !== 'errors').map(k => {
+    const v = data.filter(d => d.kind === k).map(d => d.ttf), h = v.length >> 1;
+    if (h < 2) return '';
+    const a = median(v.slice(0, h)), b = median(v.slice(-h));
+    return `${esc(kindInfo(k).name)} <b class="num">${a.toFixed(1)} s → ${b.toFixed(1)} s</b>` +
+      (b < a ? ` <span class="better">${Math.round((1 - b / a) * 100)}% faster</span>` : '');
+  }).filter(Boolean);
+  if (halves.length) {
+    $('#headline').innerHTML = 'Median time to fix, first vs second half: ' + halves.join(' · ');
+  } else {
+    $('#headline').textContent = data.length ? `${data.length} fix${data.length > 1 ? 'es' : ''} so far. The dots should sink as the fly learns.`
+      : 'No fixes yet. Each fix drops a dot here.';
+  }
+  if (!data.length) { svg.innerHTML = ''; return; }
+  const m = {l: 34, r: 104, t: 8, b: 22}, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const ts = data.map(d => d.t);
+  let t0 = Math.min(...ts), t1 = Math.max(...ts);
+  if (t1 - t0 < 60) t1 = t0 + 60;
+  // One very slow fix should not flatten the rest: clip the axis and mark what goes above it.
+  const sorted = data.map(d => d.ttf).sort((a, b) => a - b);
+  const vmax = Math.max(1, Math.min(sorted[sorted.length - 1], Math.max(10, 2.5 * sorted[Math.floor(0.9 * (sorted.length - 1))])));
+  const step = niceStep(vmax / 3), top = Math.ceil(vmax / step) * step;
+  const X = t => m.l + (t - t0) / (t1 - t0) * iw, Y = v => m.t + ih - Math.min(v, top) / top * ih;
+  let out = '';
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    out += `<line class="${v ? 'gl' : 'base'}" x1="${m.l}" x2="${m.l + iw}" y1="${Y(v)}" y2="${Y(v)}"/>`;
+    out += `<text x="${m.l - 6}" y="${Y(v) + 3.5}" text-anchor="end">${+v.toFixed(2)}s</text>`;
+  }
+  for (let i = 0; i <= 3; i++) {
+    const t = t0 + i * (t1 - t0) / 3;
+    out += `<text x="${X(t)}" y="${H - 5}" text-anchor="${i === 0 ? 'start' : i === 3 ? 'end' : 'middle'}">${fmtClock(t)}</text>`;
+  }
+  const ends = [];
+  for (const k of kinds) {
+    const pts = data.filter(d => d.kind === k).sort((a, b) => a.t - b.t), col = `var(${kindInfo(k).color})`;
+    const smooth = pts.map((p, i) => [X(p.t), Y(median(pts.slice(Math.max(0, i - 4), i + 1).map(q => q.ttf)))]);
+    if (pts.length > 1) out += `<polyline class="ln" style="stroke: ${col}" points="${smooth.map(p => p.join(',')).join(' ')}"/>`;
+    for (const p of pts) {
+      out += p.ttf > top
+        ? `<path d="M${X(p.t) - 5} ${Y(top) + 3}l5 -8l5 8z" style="fill: ${col}"/>`
+        : `<circle class="dot" cx="${X(p.t)}" cy="${Y(p.ttf)}" r="4" style="fill: ${col}"/>`;
+      out += `<circle class="hit" cx="${X(p.t)}" cy="${Y(p.ttf)}" r="9" data-tip="${esc(kindInfo(k).name)} fixed in ${p.ttf.toFixed(1)} s at ${fmtClock(p.t)}${p.dop != null ? ' · dopamine ' + num(p.dop).toFixed(2) : ''}"/>`;
+    }
+    const last = smooth[smooth.length - 1];
+    ends.push({y: last[1], x: last[0], k, v: median(pts.slice(-5).map(q => q.ttf))});
+  }
+  ends.sort((a, b) => a.y - b.y);
+  ends.forEach((e, i) => {
+    const clash = (ends[i - 1] && e.y - ends[i - 1].y < 13) || (ends[i + 1] && ends[i + 1].y - e.y < 13);
+    if (!clash) out += `<text class="end" x="${m.l + iw + 8}" y="${e.y + 4}">${esc(kindInfo(e.k).name)} ${e.v.toFixed(1)}s</text>`;
+  });
+  svg.innerHTML = out;
+}
+function drawHeat(learned) {
+  if (!learned || typeof learned !== 'object') return;
+  const key = JSON.stringify(learned);
+  if (key === S.heatKey) return;
+  S.heatKey = key;
+  const rows = ordered(Object.keys(learned), SENSES);
+  const cols = ordered([...new Set(rows.flatMap(r => Object.keys(learned[r] || {})))], ACTIONS);
+  const maxAbs = Math.max(1e-9, ...rows.flatMap(r => cols.map(c => Math.abs(num((learned[r] || {})[c])))));
+  let html = '<span></span>' + cols.map(c => `<span class="ch">${esc(c)}</span>`).join('');
+  for (const r of rows) {
+    const info = SENSE_INFO[r] || {name: r, means: '', color: '--c-central'};
+    html += `<span class="rh"><i style="background: var(${info.color})"></i><span>${esc(info.name)}<small>${esc(info.means)}</small></span></span>`;
+    for (const c of cols) {
+      const v = num((learned[r] || {})[c]), t = v / maxAbs, pct = (Math.abs(t) * 100).toFixed(0);
+      const bg = `color-mix(in oklab, var(${t >= 0 ? '--seq-hi' : '--div-neg'}) ${pct}%, var(--seq-lo))`;
+      const ink = Math.abs(t) > 0.55 ? 'var(--seq-hi-ink)' : 'var(--ink)', target = info.fix === c;
+      html += `<span class="cell${target ? ' target' : ''}" style="background: ${bg}; color: ${ink}"
+        data-tip="${esc(info.name)} (${esc(info.means)}) → ${esc(c)}: ${v.toFixed(3)}${target ? ' · the right fix' : ''}">${v.toFixed(2)}</span>`;
+    }
+  }
+  const heat = $('#heat');
+  heat.style.gridTemplateColumns = `minmax(92px, 1.3fr) repeat(${cols.length}, minmax(0, 1fr))`;
+  heat.innerHTML = html;
+}
+
+/* ---------- decision feed ---------- */
+function feedAdd(li, live) {
+  const feed = $('#feed');
+  const empty = feed.querySelector('.empty-feed');
+  if (empty) empty.remove();
+  if (live) li.classList.add('new');
+  feed.prepend(li);
+  while (feed.children.length > 80) feed.lastChild.remove();
+}
+function onAction(ev, live) {
+  const drive = ev.drive || {}, keys = ordered(Object.keys(drive), ACTIONS);
+  const max = Math.max(1e-9, ...keys.map(k => num(drive[k])));
+  const runner = keys.filter(k => k !== ev.action).sort((a, b) => num(drive[b]) - num(drive[a]))[0];
+  const senses = Object.entries(S.senses || {}).sort((a, b) => num(b[1]) - num(a[1])).filter(([, v]) => num(v) >= 1).slice(0, 2);
+  const res = ev.result || {}, ok = res.ok !== false;
+  const sensed = senses.map(([s, v]) => {
+    const info = SENSE_INFO[s] || {name: s, means: '', color: '--c-central'};
+    return `<span class="sd" style="background: var(${info.color})"></span><b>${esc(info.name)}</b> ${fmtHz(num(v))}${info.means ? ' (' + esc(info.means) + ')' : ''}`;
+  }).join(', ');
+  const li = document.createElement('li');
+  li.dataset.t = num(ev.t);
+  li.innerHTML = `
+    <div class="ev-h"><span class="t num">${fmtClock(ev.t)}</span><span class="act">${esc(ev.action)}</span>
+      <span class="ok ${ok ? 'y' : 'n'}">${ok ? '✓ done' : '✗ failed'}</span></div>
+    <div class="why">${S.tick ? `sensed ${sensed || 'nothing much'}` : 'decided'}${runner != null && ev.action in drive ?
+      ` · <b>${esc(ev.action)}</b> drive ${fmtHz(num(drive[ev.action]))} beat ${esc(runner)} ${fmtHz(num(drive[runner]))}` : ''}</div>
+    <div class="drive">${keys.map(k => `<div class="${k === ev.action ? 'win' : ''}"><span>${esc(k)}</span>
+      <span class="bar"><i style="width: ${(100 * Math.max(0, num(drive[k])) / max).toFixed(0)}%"></i></span>
+      <span class="v num">${Math.round(num(drive[k]))}</span></div>`).join('')}</div>
+    <div class="res">${esc(res.detail || '')}${res.sql ? `<code class="mono" title="${esc(res.sql)}">${esc(res.sql)}</code>` : ''}</div>`;
+  feedAdd(li, live);
+  S.lastAction = {name: ev.action, at: performance.now(), live};
+  if (live) { actionPulse(ev.action); rasterMark('action'); }
+}
+function onReward(ev, live) {
+  const fixed = Array.isArray(ev.fixed) ? ev.fixed : [];
+  const kind = ev.kind || (fixed[0] ? String(fixed[0]).replace(/[-:#]\w*$/, '') : 'issue');
+  const k = kindInfo(kind), ttf = ev.time_to_fix;
+  S.rewards.push({t: num(ev.t), kind, ttf: typeof ttf === 'number' ? ttf : NaN, dop: ev.dopamine});
+  if (S.rewards.length > 2000) S.rewards.shift();
+  const li = document.createElement('li');
+  li.className = 'reward';
+  li.innerHTML = `<div class="ev-h"><span class="t num">${fmtClock(ev.t)}</span>
+    <span>★ <b>+${num(ev.dopamine).toFixed(2)} dopamine</b></span></div>
+    <div>fixed <span class="chip"><i style="background: var(${k.color})"></i>${esc(k.name)}</span>
+    ${typeof ttf === 'number' ? `in <b class="num">${ttf.toFixed(1)} s</b>` : ''}
+    <span class="mono" style="color: var(--muted)">${fixed.map(esc).join(', ')}</span></div>`;
+  // Mark the action that just earned it.
+  const prev = [...$('#feed').children].find(el => !el.classList.contains('reward'));
+  if (prev && num(ev.t) - parseFloat(prev.dataset.t) < 4) prev.classList.add('rewarded');
+  feedAdd(li, live);
+  S.lastReward = {kind: k.name, ttf, at: performance.now(), live};
+  if (live) { dopamineFlash(ev.dopamine); rasterMark('reward'); }
+  clearTimeout(S.ttfTimer);
+  S.ttfTimer = setTimeout(drawTTF, live ? 0 : 50);
+}
+
+/* ---------- status line ---------- */
+function updateStatus() {
+  const now = performance.now(), beat = $('#beat'), logo = $('#logo');
+  let text, cls = '';
+  const issues = (S.tick && S.tick.issues) || [];
+  if (S.lastReward && S.lastReward.live && now - S.lastReward.at < 3500) {
+    text = `fixed the ${S.lastReward.kind}${typeof S.lastReward.ttf === 'number' ? ` in ${S.lastReward.ttf.toFixed(1)} s` : ''}. dopamine!`;
+    cls = 'gold';
+  } else if (S.lastAction && S.lastAction.live && now - S.lastAction.at < 2500) {
+    text = VERB[S.lastAction.name] || `${S.lastAction.name}…`;
+    cls = 'act';
+  } else if (issues.length) {
+    text = `senses trouble: ${[...new Set(issues.map(i => kindInfo(i.kind).name))].join(' + ')}… deciding`;
+    cls = 'warn';
+  } else if (S.tick) {
+    text = 'all healthy. sipping sugar.';
+  } else {
+    text = 'waiting for the fly…';
+  }
+  $('#status').textContent = text;
+  beat.className = 'beat ' + cls;
+  logo.classList.toggle('buzz', cls === 'act');
+}
+
+/* ---------- events ---------- */
+function reset() {
+  Object.assign(S, {tick: null, tickAt: 0, senses: {}, peak: {}, level: {}, sensePeak: 50, daMax: 1, hist: {},
+    rewards: [], lastAction: null, lastReward: null, heatKey: ''});
+  $('#feed').innerHTML = '<li class="empty-feed">No decisions yet. The fly acts when a sense gets loud.</li>';
+  rasterClear();
+  drawTTF();
+}
+function onHello(ev) {
+  S.hello = ev;
+  $('#nNeurons').textContent = num(ev.neurons).toLocaleString();
+  $('#nSyn').textContent = compact(num(ev.synapses));
+  $('#nSyn').title = num(ev.synapses).toLocaleString() + ' synapses';
+  $('#demoBadge').hidden = !ev.demo;
+  const rg = ev.raster_groups;
+  if (rg && typeof rg === 'object') {
+    S.rasterGroups = Object.entries(rg).map(([g, [lo, hi]]) => ({g, lo: num(lo), hi: num(hi)})).sort((a, b) => a.lo - b.lo);
+    S.rasterTotal = Math.max(...S.rasterGroups.map(b => b.hi));
+  }
+  rasterLabels();
+}
+function onTick(ev) {
+  S.tick = ev; S.tickAt = performance.now(); S.senses = ev.senses || {};
+  $('#clock').textContent = fmtClock(ev.t);
+  updateBrain(ev);
+  updateTiles(ev);
+  renderIssues();
+  drawHeat(ev.learned);
+  rasterTick(ev);
+}
+function handle(ev, live) {
+  if (!ev || typeof ev !== 'object') return;
+  try {
+    if (ev.type === 'hello') onHello(ev);
+    else if (ev.type === 'tick') onTick(ev);
+    else if (ev.type === 'action') onAction(ev, live);
+    else if (ev.type === 'reward') onReward(ev, live);
+  } catch (err) { console.error('bad event', ev.type, err); }
+  updateStatus();
+}
+function connect() {
+  const es = new EventSource('/events'), conn = $('#conn');
+  es.onopen = () => { reset(); conn.textContent = 'live'; conn.className = 'conn live'; };
+  es.onerror = () => { conn.textContent = 'reconnecting'; conn.className = 'conn'; };
+  es.onmessage = e => handle(JSON.parse(e.data), true);
+  es.addEventListener('replay', e => handle(JSON.parse(e.data), false));
+}
+
+/* ---------- tooltip ---------- */
+function setupTip() {
+  const tip = $('#tip');
+  document.addEventListener('pointermove', e => {
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (!el || !el.dataset.tip) { tip.hidden = true; return; }
+    tip.textContent = el.dataset.tip;
+    tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(innerWidth - w - 8, e.clientX + 14) + 'px';
+    tip.style.top = (e.clientY + h + 22 > innerHeight ? e.clientY - h - 12 : e.clientY + 16) + 'px';
+  });
+  document.addEventListener('pointerleave', () => (tip.hidden = true));
+}
+
+buildBrain();
+buildTiles();
+rasterSetup();
+rasterColors();
+setupTip();
+reset();
+renderIssues();
+updateStatus();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rasterColors);
+addEventListener('resize', () => { clearTimeout(S.rs); S.rs = setTimeout(drawTTF, 120); });
+setInterval(() => { if (S.tick) renderIssues(); updateStatus(); }, 250);
+connect();
+</script>
+</body>
+</html>
