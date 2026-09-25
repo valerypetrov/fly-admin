@@ -161,6 +161,16 @@ h3 { margin: 12px 0 6px; font-size: 12.5px; font-weight: 650; color: var(--ink-2
 .sev { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
 .sev i { display: block; height: 100%; border-radius: 3px; }
 .issue .age { text-align: right; font-size: 12px; color: var(--ink-2); }
+.trouble { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 2px; font-size: 12px; color: var(--ink-2); }
+.trouble button { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink);
+  background: var(--surface-2); border: 1px solid var(--grid); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.trouble button:hover { border-color: var(--axis); }
+.trouble button:focus-visible { outline: 2px solid var(--c-motor); outline-offset: 2px; }
+.trouble button:disabled { opacity: .5; cursor: default; }
+.trouble button i { width: 8px; height: 8px; border-radius: 50%; }
+.trouble .msg { color: var(--muted); }
+#feed li.poke { border-left-color: var(--axis); }
+.issue .q { grid-column: 1 / -1; font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
 .calm { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
   background: color-mix(in oklab, var(--c-sugar) 10%, var(--surface)); color: var(--ink-2); font-size: 13px; }
 .calm b { color: var(--ink); }
@@ -229,7 +239,7 @@ details.allm summary { cursor: pointer; color: var(--muted); }
 .drive .win .bar i { background: var(--c-motor); }
 .drive .v { text-align: right; }
 .res { font-size: 12px; color: var(--ink-2); }
-.res code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); margin-top: 1px; }
+.res code { display: block; white-space: pre-wrap; word-break: break-word; color: var(--muted); margin-top: 1px; }
 #feed li.reward { background: color-mix(in oklab, var(--gold) 13%, var(--surface)); border-left-color: var(--gold); font-size: 13px; }
 #feed li.reward b { font-weight: 700; }
 .chip { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
@@ -341,6 +351,11 @@ details.allm summary { cursor: pointer; color: var(--muted); }
   <section class="card health">
     <div class="card-h"><h2>Cluster</h2><span class="hint">sandbox ClickHouse on 127.0.0.1</span><span class="right hint" id="issueCount"></span></div>
     <div id="issues"></div>
+    <div class="trouble" id="trouble"><span>Make trouble:</span>
+      <button type="button" id="poke-too_many_parts" data-kind="too_many_parts">dirty a table</button>
+      <button type="button" id="poke-slow_query" data-kind="slow_query">run a slow query</button>
+      <button type="button" id="poke-errors" data-kind="errors">throw errors</button>
+      <span class="msg" id="pokeMsg" aria-live="polite"></span></div>
     <div class="tiles" id="tiles"></div>
     <details class="allm"><summary>all metrics</summary><div id="allMetrics" class="mono"></div></details>
   </section>
@@ -667,7 +682,7 @@ function renderIssues() {
       <span class="k" style="background: var(${k.color})"></span>
       <span class="nm">${esc(k.name)}<small class="mono">${esc(i.id)}</small></span>
       <span class="sev"><i style="width: ${(f * 100).toFixed(0)}%; background: var(${k.color})"></i></span>
-      <span class="age num">${fmtAge(issueAge(i))}</span></div>`;
+      <span class="age num">${fmtAge(issueAge(i))}</span>${i.query ? `<code class="q mono">${esc(i.query)}</code>` : ''}</div>`;
   }).join('');
 }
 
@@ -791,10 +806,19 @@ function onAction(ev, live) {
     <div class="drive">${keys.map(k => `<div class="${k === ev.action ? 'win' : ''}"><span>${esc(k)}</span>
       <span class="bar"><i style="width: ${(100 * Math.max(0, num(drive[k])) / max).toFixed(0)}%"></i></span>
       <span class="v num">${Math.round(num(drive[k]))}</span></div>`).join('')}</div>
-    <div class="res">${esc(res.detail || '')}${res.sql ? `<code class="mono" title="${esc(res.sql)}">${esc(res.sql)}</code>` : ''}</div>`;
+    <div class="res">${esc(res.detail || '')}${res.sql ? `<code class="mono">${esc(res.sql)}</code>` : ''}${
+      (res.queries || []).map(q => `<code class="mono">killed: ${esc(q)}</code>`).join('')}</div>`;
   feedAdd(li, live);
   S.lastAction = {name: ev.action, at: performance.now(), live};
   if (live) { actionPulse(ev.action); rasterMark('action'); }
+}
+function onPoke(ev, live) {
+  const k = kindInfo(ev.kind), li = document.createElement('li');
+  li.dataset.t = num(ev.t);
+  li.className = 'poke';
+  li.innerHTML = `<div class="ev-h"><span class="t num">${fmtClock(ev.t)}</span><span class="act">poke</span></div>
+    <div class="why">${esc(ev.by || 'someone')} made trouble: <b>${esc(k.name)}</b></div>`;
+  feedAdd(li, live);
 }
 function onReward(ev, live) {
   const fixed = Array.isArray(ev.fixed) ? ev.fixed : [];
@@ -880,6 +904,7 @@ function handle(ev, live) {
     else if (ev.type === 'tick') onTick(ev);
     else if (ev.type === 'action') onAction(ev, live);
     else if (ev.type === 'reward') onReward(ev, live);
+    else if (ev.type === 'poke') onPoke(ev, live);
   } catch (err) { console.error('bad event', ev.type, err); }
   updateStatus();
 }
@@ -917,6 +942,21 @@ updateStatus();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rasterColors);
 addEventListener('resize', () => { clearTimeout(S.rs); S.rs = setTimeout(drawTTF, 120); });
 setInterval(() => { if (S.tick) renderIssues(); updateStatus(); }, 250);
+document.querySelectorAll('#trouble button').forEach(b => {
+  const k = kindInfo(b.dataset.kind);
+  b.insertAdjacentHTML('afterbegin', `<i style="background: var(${k.color})"></i>`);
+  b.addEventListener('click', async () => {
+    b.disabled = true;
+    try {
+      const r = await fetch('/poke?kind=' + encodeURIComponent(b.dataset.kind), {method: 'POST'});
+      const j = await r.json().catch(() => ({}));
+      $('#pokeMsg').textContent = r.ok ? `${k.name}: started, watch the fly` : `${k.name}: ${j.message || 'not available'}`;
+    } catch (e) {
+      $('#pokeMsg').textContent = 'the fly is not running';
+    }
+    setTimeout(() => { b.disabled = false; }, 3000);
+  });
+});
 connect();
 </script>
 </body>

@@ -11,6 +11,7 @@ import socket
 import subprocess
 import threading
 import time
+import urllib.parse
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -46,6 +47,7 @@ class Publisher:
         self._events = deque(maxlen=400)  # (t, data) for recent actions and rewards
         self._t = 0.0
         self.url = 'http://127.0.0.1:%d/' % server.server_address[1]
+        self.on_poke = None  # set by run.py: on_poke(kind, who) -> (ok, message)
 
     def publish(self, event):
         event = _plain(event)
@@ -107,6 +109,21 @@ class _Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
         else:
             self.send_error(404)
+
+    def do_POST(self):
+        path, _, qs = self.path.partition('?')
+        poke = self.server.publisher.on_poke
+        if path != '/poke' or poke is None:
+            self.send_error(404)
+            return
+        kind = urllib.parse.parse_qs(qs).get('kind', [''])[0]
+        ok, message = poke(kind, self.client_address[0])
+        body = json.dumps({'ok': ok, 'message': message}).encode()
+        self.send_response(200 if ok else 409)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _stream(self):
         pub = self.server.publisher

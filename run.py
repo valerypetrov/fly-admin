@@ -9,10 +9,11 @@ import json
 import math
 import os
 import signal
+import threading
 import time
 
 from brain import ACTION_TO_GROUP, FlyBrain
-from cluster import Sandbox
+from cluster import KINDS, Sandbox
 from ui.server import lan_urls, start_ui
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,11 +41,14 @@ def run(minutes, record, host):
         print('UI from another machine:', ' or '.join(lan_urls(8765)), flush=True)
     rec = open(record, 'a') if record else None
 
+    lock = threading.Lock()  # pokes publish from the web server's thread
+
     def publish(ev):
-        ui.publish(ev)
-        if rec:
-            rec.write(json.dumps(ev, default=lambda o: o.tolist()) + '\n')
-            rec.flush()
+        with lock:
+            ui.publish(ev)
+            if rec:
+                rec.write(json.dumps(ev, default=lambda o: o.tolist()) + '\n')
+                rec.flush()
 
     sb = Sandbox()
     try:
@@ -63,6 +67,17 @@ def run(minutes, record, host):
 
         sb.chaos(every_s=CHAOS_EVERY_S, overlap=0.5)
         t0 = time.time()
+
+        def poke(kind, who):
+            # Someone on the network makes trouble on purpose.
+            if kind not in KINDS:
+                return False, 'unknown trouble'
+            if not sb.inject(kind):
+                return False, 'already happening'
+            publish({'type': 'poke', 't': round(time.time() - t0, 2), 'kind': kind, 'by': who})
+            return True, 'started'
+
+        ui.on_poke = poke
         end = t0 + minutes * 60 if minutes else math.inf
         prev, history, last = [], [], {}  # history: (time, action, pointless)
         while time.time() < end:

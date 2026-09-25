@@ -198,12 +198,16 @@ class Sandbox:
     # --- chaos ---
 
     def inject(self, kind):
-        """Start one real issue of this kind in a background thread."""
+        """Start one real issue of this kind in a background thread; False if one is already running."""
+        running = self._injectors.get(kind)
+        if running is not None and running.is_alive():
+            return False
         target = {'too_many_parts': self._chaos_parts, 'slow_query': self._chaos_slow,
                   'errors': self._chaos_errors}[kind]
         t = threading.Thread(target=target, daemon=True, name=f'chaos-{kind}')
         self._injectors[kind] = t
         t.start()
+        return True
 
     def chaos(self, every_s=30.0, overlap=0.3):
         """Start a timer that injects a random issue every ~every_s seconds.
@@ -308,6 +312,14 @@ class Sandbox:
                     self._next_id += 1
                 elif s == 0:
                     self._open.pop(kind, None)
+            slow = self._open.get('slow_query')
+        if slow is not None and 'query' not in slow:
+            # Remember the slow query's text, so the UI can show it.
+            text = query(f"SELECT query FROM system.processes WHERE startsWith(query_id, '{CHAOS}') "
+                         'ORDER BY elapsed DESC LIMIT 1').strip()
+            if text:
+                slow['query'] = text
+        with self._lock:
             return [dict(i, severity=round(sev[i['kind']], 3)) for i in self._open.values()]
 
     @staticmethod
@@ -319,8 +331,9 @@ class Sandbox:
     # --- what the fly does ---
 
     def act(self, name):
-        """Run one whitelisted action; returns {'ok', 'detail', 'sql'}."""
+        """Run one whitelisted action; returns {'ok', 'detail', 'sql', 'queries'}."""
         sql = []
+        queries = []
         try:
             if name == 'groom':
                 table, before = query(f"SELECT table, count() FROM system.parts WHERE database = '{DB}' "
@@ -334,7 +347,9 @@ class Sandbox:
                 detail = f'{DB}.{table}: {before} -> {after} parts'
             elif name == 'escape':
                 sql = [f"KILL QUERY WHERE startsWith(query_id, '{CHAOS}') SYNC FORMAT JSONEachRow"]
-                killed = [json.loads(line)['query_id'] for line in query(sql[0], timeout=60).splitlines()]
+                rows = [json.loads(line) for line in query(sql[0], timeout=60).splitlines()]
+                killed = [r['query_id'] for r in rows]
+                queries = [r.get('query', '') for r in rows]
                 detail = f'killed {len(killed)} chaos queries {killed}'
             elif name == 'feed':
                 detail = 'all good, nothing to do'
@@ -344,7 +359,7 @@ class Sandbox:
                 detail = 'dropped the mark cache'
             else:
                 return {'ok': False, 'detail': f'unknown action {name!r}', 'sql': ''}
-            return {'ok': True, 'detail': detail, 'sql': '; '.join(sql)}
+            return {'ok': True, 'detail': detail, 'sql': '; '.join(sql), 'queries': queries}
         except Exception as e:
             return {'ok': False, 'detail': str(e)[:300], 'sql': '; '.join(sql)}
 

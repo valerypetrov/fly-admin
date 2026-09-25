@@ -19,6 +19,8 @@ It needs a `clickhouse` binary: put it on your PATH or set `CLICKHOUSE_BINARY=/p
 
 Open http://127.0.0.1:8765/ while it runs, or from another machine on the network use the address printed at start (e.g. http://my-computer.local:8765/). The UI listens on 0.0.0.0 and only shows data; pass `--host 127.0.0.1` to keep it local. The ClickHouse sandbox always stays on 127.0.0.1.
 
+- **Make trouble** buttons in the Cluster card start a real issue in the sandbox (a table with too many parts, a slow
+  query, or a burst of errors), so you can watch the fly react. They only trigger these three fixed issues.
 - `--minutes N` stops after N minutes.
 - `--record [PATH]` writes every event sent to the UI as one JSON line. Without a PATH the file is
   `runs/<timestamp>.jsonl`.
