@@ -74,6 +74,7 @@ def run(minutes, record, host):
                 return False, 'unknown trouble'
             if not sb.inject(kind):
                 return False, 'already happening'
+            who = who.removeprefix('::ffff:')  # show IPv4 callers as plain IPv4
             publish({'type': 'poke', 't': round(time.time() - t0, 2), 'kind': kind, 'by': who})
             return True, 'started'
 
